@@ -317,23 +317,21 @@ static void frame_end_resize(WmCore *core, WmFrame *frame) {
  * window's — so the whole display stops responding, which from the user's
  * side is a session that has gone dead.
  *
- * Only a window this module manages can have one of those grabs on it, and
- * the grab reports the client it was taken on, so that is the test. A press
- * that arrived on the frame itself, on the bar or on the root was not grabbed
- * and is left alone: sending an XAllowEvents for a grab that is not active is
- * a no-op at best and is what makes the difference between answering a grab
- * and guessing at one. */
+ * SO EVERY PRESS IS ANSWERED, and the test that used to gate this is gone on
+ * purpose. The old test was "is this window a client this manager holds?", and
+ * it was wrong for one case that is not rare at all: a client whose frame has
+ * just been taken away. wm_frame_destroy() handed such a client back to the
+ * root while its passive grabs stayed on it, so a click on that client
+ * activated a synchronous grab the frame code could no longer recognise — no
+ * frame was found, nothing answered, and the pointer stayed frozen for the
+ * rest of the session, which from the user's side is a desktop gone dead. A
+ * press that was never grabbed costs one XAllowEvents that does nothing, and
+ * that is a fair price for the guarantee that no grab is ever left unanswered.
+ *
+ * (wm_frame_destroy() releases those grabs now as well; this is the net under
+ * it, so the freeze cannot come back by some path neither of them foresaw.) */
 static void frame_allow_sync_grab(WmCore *core, XButtonEvent *press) {
-    /* The grab may have been taken on a client the press reached through one
-       of that client's own CHILD windows, in which case the event names the
-       child and not the client. Telling those apart from a press that belongs
-       to nobody is the whole of this test: a press that is under SOME managed
-       client activated that client's grab and has to be answered, or the
-       pointer stays frozen (see frame_client_of). */
-    if (wm_frame_find(core, press->window) ||
-        frame_client_of(core, press->window) != None) {
-        XAllowEvents(core->display, AsyncPointer, press->time);
-    }
+    XAllowEvents(core->display, AsyncPointer, press->time);
 }
 
 /* Put the pointer where a click on a scaled window actually is.
@@ -394,6 +392,18 @@ static void frame_event(WmCore *core, XEvent *event) {
                 on_client = 1;
             } else {
                 frame = wm_frame_find_by_frame(core, event->xbutton.window);
+                if (!frame) {
+                    /* The press may name one of the client's own CHILD windows
+                       rather than the client — the same Wine case the
+                       Button1 path below resolves. Without this an Alt+drag
+                       inside such a window finds no frame, does nothing, and
+                       leaves the grab it activated unanswered. */
+                    Window owner = frame_client_of(core, event->xbutton.window);
+                    if (owner != None) {
+                        frame = wm_frame_find(core, owner);
+                        on_client = frame != NULL;
+                    }
+                }
             }
             if (!frame) {
                 /* Neither a managed client nor one of this manager's frames,
@@ -546,8 +556,38 @@ static void frame_event(WmCore *core, XEvent *event) {
         WmFrame *frame = frame_for_event(core, event->xbutton.window);
         if (frame && frame->dragging) {
             frame_end_drag(core, frame);
-        } else if (frame && frame->resizing) {
+            break;
+        }
+        if (frame && frame->resizing) {
             frame_end_resize(core, frame);
+            break;
+        }
+
+        /* THE RELEASE IS ANSWERED EVEN WHEN IT NAMES NO FRAME, and that is not
+           a fallback — it is the guarantee. A drag or a resize holds the
+           pointer with XGrabPointer, and the ONLY thing that gives it back is
+           the release. If the release arrives against a window this lookup
+           cannot resolve — a client's child window, a window destroyed
+           mid-drag, or a frame whose entry moved in the table — then a "return
+           if no frame" here leaves the pointer held for the rest of the
+           session. From the user's side that is the mouse stopping dead and
+           the whole desktop refusing the pointer, which is the same freeze the
+           synchronous-grab bug gave by a different door.
+         *
+         * So the table is walked and any frame still mid-gesture is finished.
+           At most one can be — only one pointer exists, so only one window can
+           be being dragged — and a release that found no such frame is the
+           ordinary click-through and costs one pass over a short array. */
+        for (int i = 0; i < core->frame_count; i++) {
+            WmFrame *busy = &core->frames[i];
+            if (busy->dragging) {
+                frame_end_drag(core, busy);
+                break;
+            }
+            if (busy->resizing) {
+                frame_end_resize(core, busy);
+                break;
+            }
         }
         break;
     }

@@ -1289,6 +1289,23 @@ void wm_frame_destroy(WmCore *core, WmFrame *frame, int client_gone) {
         /* Put the client back where the desktop found it, so a program that
            outlives this window manager is not left fatherless. */
         XRemoveFromSaveSet(core->display, frame->client);
+
+        /* AND TAKE BACK THE PASSIVE GRABS TAKEN ON IT, which is not tidiness.
+         *
+         * wm_frame_create() puts a passive button grab on every client it
+         * manages, and X ties a grab to the window it was taken on, not to the
+         * manager that took it. A client that outlives its frame — this branch
+         * exactly: the frame is going, the program is not — therefore keeps a
+         * synchronous grab over a window the frame table no longer holds, and
+         * the next click on it activates a grab the manager can no longer
+         * recognise. Nothing answers it, so the server holds the pointer for
+         * the rest of the session: the desktop stops responding to the mouse
+         * and the program under it stops too. Releasing the grabs here, before
+         * the client goes back to the root, is what makes that window the
+         * server's own again — as if it had never been managed. */
+        XUngrabButton(core->display, Button1, AnyModifier, frame->client);
+        XUngrabButton(core->display, Button3, AnyModifier, frame->client);
+
         XReparentWindow(core->display, frame->client, core->root,
                         frame->x, frame->y);
     }
