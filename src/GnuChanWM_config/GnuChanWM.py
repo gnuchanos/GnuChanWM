@@ -212,8 +212,8 @@ gcl_Power.Lid(
     # yalnizca uyaninca, asagidaki OnLidOpenLockScreen ayariyla gelebilir.
     LockBeforeSuspend=False,
 
-    # Lid acilinca (uyandiginda) ekran koruyucu baslasin mi.
-    OnLidOpenScreenSaver=True,
+    # Lid acilinca ekran koruyucuyu hemen baslatma; uyandiginda masaustu gorunsun.
+    OnLidOpenScreenSaver=False,
 
     # Lid acilinca kilit ekrani gelsin mi. (Uyanista kilit istiyorsan bunu True
     # yap; ekran koruyucu ile birlikte de calisabilir.)
