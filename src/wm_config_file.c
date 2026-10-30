@@ -775,7 +775,7 @@ static void add_binding(const Script *script, WmConfig *config,
         wm_config_value_text(&keys->items[i], written, sizeof(written));
         modifiers |= modifier_of(script, written);
     }
-    if (modifiers == 0) {
+    if (modifiers == 0 && keys->item_count > 1) {
         return;
     }
 

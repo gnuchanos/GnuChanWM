@@ -356,7 +356,7 @@ static int add_config_binding(WmCore *core, const WmBinding *binding) {
     if (binding_count >= MAX_BINDINGS) {
         return -1;
     }
-    if (!binding->key[0] || binding->modifiers == 0) {
+    if (!binding->key[0]) {
         return -1;
     }
 
