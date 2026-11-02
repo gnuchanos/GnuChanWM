@@ -9,7 +9,7 @@
  *
  * There is one page, and it is the system's. A settings page used to sit
  * beside it as an empty placeholder, and it is gone: the desktop is configured
- * by the script alone. GnuChanWM.py is the one place a setting is changed, and
+ * by the config alone. GnuChanWM.conf is the one place a setting is changed, and
  * a second place that edited the same values would be a second source of truth
  * to keep in step. A page row is therefore only drawn when there is more than
  * one page to choose between; with one page the menu opens straight onto its

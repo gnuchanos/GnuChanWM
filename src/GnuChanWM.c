@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
                    "\n"
                    "Super+1..N goes to a workspace and Super+Shift+1..N sends\n"
                    "the focused window to one and stays where you are. How\n"
-                   "many there are is what the settings script's layout widget\n"
+                   "many there are is what the settings config's layout widget\n"
                    "asks for.\n"
                    "\n"
                    "The title bar's buttons minimise, maximise and close, and\n"

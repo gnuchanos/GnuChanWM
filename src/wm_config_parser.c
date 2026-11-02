@@ -1,5 +1,5 @@
 /*
- * wm_config_parser.c — read the settings script into statements.
+ * wm_config_parser.c — read structured settings data into statements.
  *
  * The tokeniser is the whole of the difficulty, and it is small on purpose.
  * It has to know two things Python knows and a naive read would get wrong:
@@ -15,8 +15,8 @@
  *
  *     gcl_BAR.call(Widgets=[gcl_Widgets.Clock(format="%H:%M")])
  *
- * Anything else — an `if`, a `for`, a function definition — is rejected: a
- * script that computes its own desktop cannot be known without running it.
+ * Anything else — an `if`, a `for`, a function definition — is rejected.
+ * Configuration text is parsed as data and is never executed.
  */
 #include <ctype.h>
 #include <stdio.h>

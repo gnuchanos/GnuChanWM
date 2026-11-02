@@ -1,18 +1,14 @@
 /*
- * wm_config_parser.h — enough of the Python grammar to read the settings
- * script, and nothing more.
+ * wm_config_parser.h — declarations for the structured settings parser.
  *
- * The settings file is not a config format with Python in it; it is a Python
- * script, and the parts of the language it uses are the parts a person would
- * use to describe a desktop: a name given a value, and a call that passes
- * named arguments.
+ * The .conf format is a sequence of Key = value entries. Structured values
+ * may contain lists and calls so bars and key bindings remain data:
  *
  *     default_terminal = "xterm"
  *     gcl_BAR.call(Position="top", Size=24)
  *
- * So this is not a Python interpreter and must not become one. It reads
- * statements of exactly two shapes — assignment and call — and produces a
- * list of them for the config module to walk.
+ * This is not a Python interpreter. It reads configuration data and produces
+ * a list of assignments and structured calls for the config module to walk.
  *
  * The parser is deliberately separate from the module that gives the
  * statements meaning. Reading the file and understanding it are two

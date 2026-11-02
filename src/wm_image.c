@@ -43,7 +43,7 @@ static int file_readable(const char *path) {
  * copied from expands it, so it is expanded here too. A relative name is
  * looked for beside the settings script first — the script and its picture are
  * written together, so `BackgroundImage="bg.png"` means the bg.png next to
- * GnuChanWM.py — and then relative to the working directory, which is what a
+ * GnuChanWM.conf — and then relative to the working directory, which is what a
  * name in a shell command would mean.
  *
  * Returns 1 when a readable file was found, 0 otherwise; `out` is filled

@@ -1,13 +1,13 @@
 /*
  * wm_config.h — the settings the desktop is built from.
  *
- * GnuChanWM is configured by a script, not by a file of key = value pairs:
- * the same file a user would write to move the bar, recolour a window border
- * or bind a key. That script is Python, and this header is the shape of what
- * running it produces — the small, fixed set of things the desktop can be
- * asked for.
+ * GnuChanWM is configured by structured Key = value data: the same file a
+ * user would write to move the bar, recolour a window border or bind a key.
+ * Values are parsed as data and never executed; this header is the shape of
+ * what those values describe — the small, fixed set of things the desktop
+ * can be asked for.
  *
- * Everything here is plain data. The script is read by wm_config_parser.c,
+ * Everything here is plain data. The config is read by wm_config_parser.c,
  * walked by wm_config_file.c, and drawn by whichever module owns the thing
  * being described: the bar by wm_desktop.c, the window border by wm_frame.c
  * through the style wm_config_apply() fills in. Nothing in this header knows
@@ -350,7 +350,7 @@ typedef struct WmConfig {
 
     /* --- idle: the screen that goes dark because nobody is there --------
      *
-     * Set through `gcl_Power.Idle(...)` in the settings script. The X server
+     * Set through `gcl_Power.Idle(...)` in the settings config. The X server
      * keeps a screen-blanking timer and a DPMS timer of its own, and on a
      * machine that never turns them off the panel simply goes dark after a
      * while — a black screen with no screen saver and nothing to wake: the
@@ -444,19 +444,20 @@ void wm_config_workarea(const WmConfig *config, int screen_width,
                         int screen_height, int *x, int *y,
                         int *width, int *height);
 
-/* Where the script is looked for: $XDG_CONFIG_HOME/GnuChanWM/GnuChanWM.py, or
-   ~/.config/GnuChanWM/GnuChanWM.py. Written into buffer, which is returned. */
+/* Where settings are looked for: $XDG_CONFIG_HOME/GnuChanWM/GnuChanWM.conf,
+   or ~/.config/GnuChanWM/GnuChanWM.conf. Written into buffer, which is
+   returned. A missing .conf can still be read from its legacy .py sibling. */
 char *wm_config_path(char *buffer, unsigned int size);
 
-/* Read the script at path into config. Returns 0 when the file was read and
+/* Read the config at path into config. Returns 0 when the file was read and
    walked, -1 when it could not be opened or could not be parsed far enough to
    trust — a half-read config is not applied. */
 int wm_config_load(WmConfig *config, const char *path);
 
-/* Read the script again and apply it, and show the reason in a window when it
+/* Read the config again and apply it, and show the reason in a window when it
    cannot be read. This is the reload key's whole job: a person presses it when
    they want the file read again, and nothing reads the file on its own. The
-   read is all-or-nothing — a script that does not parse leaves the desktop
+   read is all-or-nothing — a config that does not parse leaves the desktop
    exactly as it was, and the mistake is put on screen rather than applied
    half-read. Returns 1 when the desktop changed. */
 int wm_config_reload_forced(WmCore *core);

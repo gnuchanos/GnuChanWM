@@ -44,13 +44,11 @@ BIN_DIR = Path("/usr/local/bin")
 SESSION_DIR = Path("/usr/share/xsessions")
 SESSION_FILE = SESSION_DIR / "gnuchanwm.desktop"
 
-# The settings script, installed into the user's own config directory. The
-# window manager reads it from there, so a machine that never had a script
-# needs one put in place of it — otherwise the desktop falls back to its
-# built-in defaults and looks nothing like what GnuchanOS shipped.
-CONFIG_SOURCE = ROOT / "GnuChanWM_config" / "GnuChanWM.py"
+# The settings config, installed into the user's own config directory only
+# when neither a current .conf nor a legacy .py config already exists.
+CONFIG_SOURCE = ROOT / "GnuChanWM_config" / "GnuChanWM.conf"
 CONFIG_DIR_NAME = "GnuChanWM"
-CONFIG_FILE_NAME = "GnuChanWM.py"
+CONFIG_FILE_NAME = "GnuChanWM.conf"
 
 SOURCES = (
     "wm_core.c",
@@ -544,17 +542,10 @@ def invoking_user() -> tuple[Path, int, int] | None:
 
 
 def install_config() -> None:
-    """Put the settings script where the window manager will read it.
+    """Install the shipped .conf only when no user config exists.
 
-    The installed script is replaced on every run, not kept: this installer
-    owns that file, and a machine that installs a new build has to get the
-    settings that build ships with rather than whichever script happened to be
-    there. The old file is removed first — an install that only copied over it
-    would leave a script the window manager is watching change underneath it,
-    and the copy is a fresh file either way.
-
-    The window manager reads the script live, so a running session picks the
-    new one up on its own; nothing here needs to reload it.
+    Replacing this file during install discarded settings changes. A legacy
+    .py config is kept intact and remains readable by the C parser.
     """
     if not CONFIG_SOURCE.is_file():
         return
@@ -578,12 +569,10 @@ def install_config() -> None:
 
     directory.mkdir(parents=True, exist_ok=True)
 
-    # The old script is taken out before the new one is put in place, so the
-    # result is the shipped file and nothing of what was there before. A
-    # missing file is not an error: a first install has nothing to remove.
-    if target.exists():
-        target.unlink()
-        detail(f"removed the old {target}")
+    legacy_target = directory / "GnuChanWM.py"
+    if target.exists() or legacy_target.exists():
+        detail(f"kept existing settings in {directory}")
+        return
 
     shutil.copyfile(CONFIG_SOURCE, target)
 

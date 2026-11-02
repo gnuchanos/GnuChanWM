@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
@@ -908,7 +909,15 @@ static void walk(Script *script, WmConfig *config,
             continue;
         }
 
-        if (statement->kind == WM_STMT_ASSIGN) {
+        if (statement->kind == WM_STMT_ASSIGN &&
+            statement->value.kind == WM_VALUE_CALL &&
+            statement->value.call) {
+            /* New .conf files express every top-level entry as Key = value.
+               Calls remain structured values, so the existing walker can
+               keep interpreting bars, themes and bindings without executing
+               any configuration text. */
+            statement = statement->value.call;
+        } else if (statement->kind == WM_STMT_ASSIGN) {
             if (strcmp(statement->target, "default_terminal") == 0) {
                 wm_config_value_text(&statement->value, config->terminal,
                                      sizeof(config->terminal));
@@ -1094,9 +1103,9 @@ char *wm_config_path(char *buffer, unsigned int size) {
     const char *xdg = getenv("XDG_CONFIG_HOME");
     const char *home = getenv("HOME");
     if (xdg && xdg[0]) {
-        snprintf(buffer, size, "%s/GnuChanWM/GnuChanWM.py", xdg);
+        snprintf(buffer, size, "%s/GnuChanWM/GnuChanWM.conf", xdg);
     } else if (home && home[0]) {
-        snprintf(buffer, size, "%s/.config/GnuChanWM/GnuChanWM.py", home);
+        snprintf(buffer, size, "%s/.config/GnuChanWM/GnuChanWM.conf", home);
     } else {
         buffer[0] = '\0';
     }
@@ -1106,6 +1115,18 @@ char *wm_config_path(char *buffer, unsigned int size) {
 int wm_config_load(WmConfig *config, const char *path) {
     if (!config || !path || !path[0]) {
         return -1;
+    }
+    char legacy_path[WM_CONFIG_TEXT_LENGTH];
+    if (access(path, F_OK) != 0) {
+        size_t length = strlen(path);
+        if (length >= 5 && strcmp(path + length - 5, ".conf") == 0 &&
+            length - 5 + 3 < sizeof(legacy_path)) {
+            memcpy(legacy_path, path, length - 5);
+            memcpy(legacy_path + length - 5, ".py", 4);
+            if (access(legacy_path, F_OK) == 0) {
+                path = legacy_path;
+            }
+        }
     }
     WmStatement *statements = NULL;
     int count = 0;
@@ -1206,6 +1227,19 @@ int wm_config_load(WmConfig *config, const char *path) {
     walk(&script, &parsed, statements, count);
 
     wm_config_statements_free(statements, count);
+
+    /* Earlier shipped configs bound Alt+P directly to --once. Keep those
+       user-edited files readable, while moving the established shortcut to
+       the capture UI introduced with the .conf format. */
+    for (int i = 0; i < parsed.binding_count; i++) {
+        WmBinding *binding = &parsed.bindings[i];
+        if (binding->modifiers == Mod1Mask &&
+            strcmp(binding->key, "p") == 0 &&
+            strcmp(binding->command, "GnuChanScreenShoot --once") == 0) {
+            copy_text(binding->command, sizeof(binding->command),
+                      "GnuChanScreenShoot --capture");
+        }
+    }
 
     /* How many workspaces the session has is read from the layout widget that
        draws them: a script asking for start_layout=0, end_layout=5 is asking
