@@ -1228,16 +1228,16 @@ int wm_config_load(WmConfig *config, const char *path) {
 
     wm_config_statements_free(statements, count);
 
-    /* Earlier shipped configs bound Alt+P directly to --once. Keep those
-       user-edited files readable, while moving the established shortcut to
-       the capture UI introduced with the .conf format. */
+    /* A shipped version changed the default Alt+P screenshot action to the
+       interactive chooser. Bring that exact legacy default back to a direct
+       capture, while leaving any other user command untouched. */
     for (int i = 0; i < parsed.binding_count; i++) {
         WmBinding *binding = &parsed.bindings[i];
         if (binding->modifiers == Mod1Mask &&
             strcmp(binding->key, "p") == 0 &&
-            strcmp(binding->command, "GnuChanScreenShoot --once") == 0) {
+            strcmp(binding->command, "GnuChanScreenShoot --capture") == 0) {
             copy_text(binding->command, sizeof(binding->command),
-                      "GnuChanScreenShoot --capture");
+                      "GnuChanScreenShoot --once");
         }
     }
 
