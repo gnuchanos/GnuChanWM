@@ -299,11 +299,14 @@ void wm_frame_move(WmCore *core, WmFrame *frame, int x, int y) {
     frame->x = x;
     frame->y = y;
 
-    /* The window is moved and nothing is redrawn. The bar's picture is inside
-       the window and moves with it, so the pixels are already right — and
-       clearing or repainting them here is what used to flash on every motion
-       event of a drag. */
+    /* A move can take the frame partly or wholly off-screen. X does not have
+       to retain those clipped pixels, and a later move back is not guaranteed
+       to produce an Expose for every lost part. Repaint the manager-owned
+       chrome after the move so the border is complete at the new position.
+       Motion events are coalesced by the drag handler, so this is one repaint
+       for the newest pointer position rather than work for every stale step. */
     XMoveWindow(core->display, frame->frame, x, y);
+    wm_frame_draw(core, frame);
     frame_notify_configure(core, frame);
     XFlush(core->display);
 }
