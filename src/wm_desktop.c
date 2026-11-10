@@ -1235,6 +1235,8 @@ static void desktop_event(WmCore *core, XEvent *event) {
         if (event->xconfigure.window == core->root) {
             core->width = event->xconfigure.width;
             core->height = event->xconfigure.height;
+            core->desktop_width = event->xconfigure.width;
+            core->desktop_height = event->xconfigure.height;
             desktop_paint_background(core);
             desktop_configure_bar(core);
             desktop_bar(core);
