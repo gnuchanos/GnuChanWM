@@ -1228,18 +1228,32 @@ int wm_config_load(WmConfig *config, const char *path) {
 
     wm_config_statements_free(statements, count);
 
-    /* A shipped version changed the default Alt+P screenshot action to the
-       interactive chooser. Bring that exact legacy default back to a direct
-       capture, while leaving any other user command untouched. */
+    /* Screenshot hotkeys belong to GnuChanScreenShoot's session daemon, which
+       owns Alt+P, Shift+Alt+P, and Print. Remove only the shipped legacy WM
+       bindings so they cannot steal those keys; preserve user-defined actions. */
+    int kept_bindings = 0;
     for (int i = 0; i < parsed.binding_count; i++) {
         WmBinding *binding = &parsed.bindings[i];
-        if (binding->modifiers == Mod1Mask &&
-            strcmp(binding->key, "p") == 0 &&
-            strcmp(binding->command, "GnuChanScreenShoot --capture") == 0) {
-            copy_text(binding->command, sizeof(binding->command),
-                      "GnuChanScreenShoot --once");
+        int legacy_screenshot_binding =
+            (binding->modifiers == Mod1Mask &&
+             strcmp(binding->key, "p") == 0 &&
+             (strcmp(binding->command,
+                     "GnuChanScreenShoot --capture") == 0 ||
+              strcmp(binding->command,
+                     "GnuChanScreenShoot --once") == 0)) ||
+            (binding->modifiers == 0 &&
+             strcmp(binding->key, "Print") == 0 &&
+             strcmp(binding->command,
+                    "GnuChanScreenShoot --settings") == 0);
+        if (legacy_screenshot_binding) {
+            continue;
         }
+        if (kept_bindings != i) {
+            parsed.bindings[kept_bindings] = *binding;
+        }
+        kept_bindings++;
     }
+    parsed.binding_count = kept_bindings;
 
     /* How many workspaces the session has is read from the layout widget that
        draws them: a script asking for start_layout=0, end_layout=5 is asking
